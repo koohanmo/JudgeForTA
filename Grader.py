@@ -2,6 +2,10 @@ import os
 import subprocess
 import xlsxwriter
 
+codeDir ="codes/"
+testSetDir = "testSet/"
+resultSetDir= "resultLog/"
+
 class gradingResult:
     def __init__(self, id):
         self.id=id
@@ -23,7 +27,7 @@ class gradingResult:
 def compileCode(cppfileName):
     if(cppfileName.find('.cpp')==-1) : return False
     # g++ Main.cc - o Main - O2 - Wall - lm - -static - std = c + +11 - DONLINE_JUDGE
-    commandStr = "g++ " + cppfileName + " -o " + cppfileName[:-4] + " -O2 -std=c++11"
+    commandStr = "g++ " +cppfileName + " -o " +cppfileName[:-4] + " -O2 -std=c++11"
     output = subprocess.Popen([commandStr], stderr=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
 
     #To file
@@ -33,20 +37,23 @@ def compileCode(cppfileName):
     if (outputErr.decode('utf-8').find("error") != -1): return False,outputErr.decode('utf-8')
     return True, ""
 
-def getFiles(path):
+def getFiles(TestPath):
     os.chdir(TestPath)
     codeFiles = []
     inputFiles = []
     outputFiles = []
 
     #Check files
-    for files in os.listdir(TestPath):
+    for files in os.listdir(TestPath+'/'+codeDir):
         if files.find(".cpp")!= -1:
             codeFiles.append(files)
-        elif files.find("input")!=-1 and files.find(".txt")!=-1:
+
+    for files in os.listdir(TestPath+'/'+testSetDir):
+        if files.find("input")!=-1 and files.find(".txt")!=-1:
             inputFiles.append(files)
         elif files.find("output")!=-1 and files.find(".txt")!=-1:
             outputFiles.append(files)
+
 
     codeFiles.sort()
     inputFiles.sort()
@@ -88,11 +95,11 @@ def excuteCode(command,
                 resultErrFileName,
                 maxTime=1):
 
+
     print("statr process : %s"%command)
     with open(inputFileName,'r') as inputTxt ,\
             open(resultFileName,'w+') as resultFile,\
-            open(resultErrFileName,'w+') as errFile, \
-            open(outputFileName) as resultTxt:
+            open(resultErrFileName,'w+') as errFile:
         try:
 
             p=subprocess.run([command],
@@ -104,14 +111,14 @@ def excuteCode(command,
             # print("stderr : ",p.stderr)
             #print("returncode :",p.returncode)
             if p.returncode !=0:
-                #print("RuntimeError")
+                print("RuntimeError")
                 return "RuntimeError"
 
         except subprocess.TimeoutExpired:
-            #print("Timeout")
+            print("Timeout")
             return "Timeout"
         except:
-            #print("Error")
+            print("Error")
             return "Error"
 
     isPass = compareInputNOutput(outputFileName, resultFileName)
@@ -136,9 +143,9 @@ def grading(codeFiles,inputFiles,outputFiles):
         result.append(curResult)
 
         #print("Start Compile %s...."%cppcode)
-        compileResult, errLog = compileCode(cppfileName=cppcode)
+        compileResult, errLog = compileCode(cppfileName=codeDir+cppcode)
         if compileResult ==False:
-            #print("%s : CompileError"%cppcode)
+            print("%s : CompileError"%cppcode)
             curResult.setResult("ComfileError")
             curResult.appendLog(errLog)
             continue;
@@ -148,16 +155,17 @@ def grading(codeFiles,inputFiles,outputFiles):
         #print("%s : Start Compare input && output"%cppcode)
         for x in range(len(inputFiles)):
             projectPath = os.path.abspath(".") + "/";
-            inputPath = projectPath + inputFiles[x]
-            outputPath = projectPath + outputFiles[x]
 
-            resultDir = projectPath + cppcode[:-4] + "_result/"
+            inputPath = projectPath +testSetDir+ inputFiles[x]
+            outputPath = projectPath +testSetDir+ outputFiles[x]
+
+            resultDir = projectPath+ resultSetDir + cppcode[:-4]
             os.makedirs(resultDir, exist_ok=True)
 
-            resultPath = resultDir + "result_" + inputFiles[x]
-            resulterrPath = resultDir + "err_" + inputFiles[x]
+            resultPath = resultDir +"/"+ "result_" + inputFiles[x]
+            resulterrPath = resultDir+"/" + "err_" + inputFiles[x]
 
-            command = "./"+cppcode[:-4]
+            command = "./"+codeDir+cppcode[:-4]
 
             testResult = excuteCode(command=command,
                                     inputFileName=inputPath,
